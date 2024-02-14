@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.stats import pearsonr
 import pandas as pd
-from data_loader import get_data
+from data_loader import get_pkl_data
 
 frictions = [15, 17.5, 22.5, 30, 37.5, 45]
 aspect_ratio_ids = ["027", "046", "054", "069", "082"]
@@ -19,7 +19,7 @@ for i in range(len(frictions)):
 # Preprocess data
 data_holder = {"aspect_ratio": [], "friction": [], "runout_true": [], "runout_pred": []}
 for i, file_name in enumerate(file_names):
-    current_data = get_data(f"{data_dir}/{file_name}")
+    current_data = get_pkl_data(f"{data_dir}/{file_name}")
     for key in data_holder.keys():
         data_holder[key].append(current_data[key])
 df = pd.DataFrame(data=data_holder)

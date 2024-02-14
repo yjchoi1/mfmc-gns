@@ -1,8 +1,9 @@
 import pickle
 import numpy as np
+import torch
 from matplotlib import pyplot as plt
 
-def get_npz_data(path):
+def get_npz_data(path, option):
     with np.load(path, allow_pickle=True) as data_file:
         if 'gns_data' in data_file:
             data = data_file['gns_data']
@@ -18,7 +19,26 @@ def get_npz_data(path):
         H0 = positions[0, :, 1].max() - positions[0, :, 1].min()
         aspect_ratio = H0 / L0
 
-    result = {"aspect_ratio": aspect_ratio, "friction": friction, "runout_true": runout_true}
+    if option == "runout_only":
+        result = {
+            "aspect_ratio": aspect_ratio,
+            "friction": friction,
+            "runout_true": runout_true
+        }
+    elif option == "entire_data":
+        positions, _particle_type, _material_property = data[0]
+        positions = np.transpose(positions, (1, 0, 2))
+        particle_type = np.full(positions.shape[0], _particle_type, dtype=int)
+        material_property = np.full(positions.shape[0], _material_property, dtype=float)
+        n_particles_per_example = positions.shape[0]
+        result = {
+            "positions": torch.tensor(positions).to(torch.float32).contiguous(),
+            "particle_type": torch.tensor(particle_type).contiguous(),
+            "material_property": torch.tensor(material_property).to(torch.float32).contiguous(),
+            "n_particles_per_example": n_particles_per_example
+        }
+    else:
+        raise ValueError
 
     return result
 
