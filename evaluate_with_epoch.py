@@ -12,10 +12,10 @@ from matplotlib import pyplot as plt
 
 
 # Set epochs to analyze
-epochs = np.arange(0, 1000000, 100000)
-plot_step = 2
+epochs = np.arange(0, 200000, 100000)
+plot_step = 2  # plot interval while evaluating through epochs
 output_dir = '/work2/08264/baagee/frontera/mfmc-gns/outputs/'
-# Output path
+output_file = 'eval_new_format-time.pkl'
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
@@ -24,37 +24,34 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 simulator_metadata_path = '/work2/08264/baagee/frontera/gns-mpm-data/gns-data/datasets/sand2d_frictions-sr020/'
 noise_std = 6.7e-4
 model_path = '/work2/08264/baagee/frontera/gns-mpm-data/gns-data/models/sand2d_frictions-sr020/'
-checkpoint_interval = 1000
 INPUT_SEQUENCE_LENGTH = 6
 
-# ground truth data
-frictions = [(0, 15), (1, 17.5), (2, 22.5), (3, 30), (4, 37.5), (5, 45)]  # id-friction pare
+# Get ground truth data paths
 aspect_ratio_ids = ["027", "046", "054", "069", "082"]
 # aspect_ratio_ids = ["027", "046"]
 data_dir = "/work2/08264/baagee/frontera/gns-mpm-data/mpm/mfmc/"
-
-# Get true runouts file name (npz)
+friction_ids = [0, 2, 3, 4, 5]  # [(0, 15), (1, 17.5), (2, 22.5), (3, 30), (4, 37.5), (5, 45)]  # id-friction pare
+# for friction_id in [0, 2, 3, 4, 5]:
 true_npz_files = []
-for friction_id in [0, 2, 3, 4, 5]:
-# for friction_id in [0]:
+for friction_id in friction_ids:
     for a_id in aspect_ratio_ids:
         true_npz_file = f"{data_dir}/mfmc-a{a_id}-{friction_id}.npz"
         true_npz_files.append(true_npz_file)
 
-# Get true values
+# Get ground truth values
 true_data_holder = {"aspect_ratio": [], "friction": [], "runout_true": []}
 for i, file_path in enumerate(true_npz_files):
     current_data = data_loader.get_npz_data(file_path, option="runout_only")
     for key in true_data_holder.keys():
         true_data_holder[key].append(current_data[key])
 
-
-# Load model with current epoch
+# Make dict to save the rollout analysis result
 data_holder = {}
 
+# Evaluate the values for epochs
 for i, epoch in enumerate(epochs):
-    print(f"Current epoch {epoch}")
 
+    print(f"Current epoch {epoch}")
     model_file = f'model-{epoch}.pt'
 
     # Load simulator
@@ -75,8 +72,7 @@ for i, epoch in enumerate(epochs):
 
         # Rollout
         sequence_length = data["positions"].shape[1]
-        # Forward evaluation for runout with selected model inputs (aspect ratios & frictions)
-
+        # Forward evaluation for runout with selected data point (aspect ratios & frictions)
         t_rollout_start = time.time()
         with torch.no_grad():
             predicted_positions = rollout_with_checkpointing(
@@ -85,9 +81,7 @@ for i, epoch in enumerate(epochs):
                 particle_types=data["particle_type"].to(device),
                 material_property=data["material_property"].to(device),
                 n_particles_per_example=data["n_particles_per_example"],
-                nsteps=sequence_length - INPUT_SEQUENCE_LENGTH,
-                # exclude initial positions (x0) which we already have
-                checkpoint_interval=checkpoint_interval,
+                nsteps=sequence_length - INPUT_SEQUENCE_LENGTH  # exclude initial positions (x0) which we already have
             )
         t_rollout_end = time.time()
         t_rollout = t_rollout_end - t_rollout_start
@@ -125,7 +119,7 @@ for i, epoch in enumerate(epochs):
 
 
     # Save current data_holder
-    with open(f"{output_dir}/eval_new_format-0to1000k.pkl", 'wb') as file:
+    with open(f"{output_dir}/{output_file}", 'wb') as file:
         pickle.dump(data_holder, file)
 
     a=1
