@@ -33,13 +33,14 @@ for key, velue in results.items():
 
 # Training time for maximum epoch, pe_max (s)
 pe_max = 604800  # assumed to be 1 week in sec for 1M epochs
-emax = 3e6
+emax = 7e6
+is_fair_comparison = True
 # high-fidelity eval time: w0, s
-w0 = 8280
+w0 = 8280 * 56  # time * processes
 # low-fidelity eval time: w1, s
-w1 = 32
+w1 = 32 * 3072  # time * CUDA cores
 p_total_add_coeff = 500000
-start_sampling = 9
+start_sampling = 8
 
 # Get data
 epochs = []
@@ -96,15 +97,19 @@ ax.set_ylabel(r"$1-\rho(e)^2$")
 ax.set_yscale("log")
 ax.set_title(rf"$c_{{a,1}} = {fit_params[0]:.3f}$, $\alpha = {fit_params[1]:.3f}$")
 ax.legend()
-plt.savefig(f"{dat_dir}/decay-emax{emax}-from{start_sampling}.png")
+plt.savefig(f"{dat_dir}/decay-emax{emax}-from{start_sampling}-fair_{is_fair_comparison}.png")
 
 # Objective
 fig1, ax = plt.subplots()
 objectives = [g(e) for e in epochs]
+min_idx = np.argmin(np.array(objectives))
 ax.plot(epochs, objectives)
+ax.scatter(epochs[min_idx], objectives[min_idx],
+           label=f"Min: epochs={epochs[min_idx]:.2e}, objective={objectives[min_idx]:.2e}")
 ax.set_xlabel("Epochs, n")
 ax.set_ylabel(r"Objective")
-plt.savefig(f"{dat_dir}/objective-emax{emax}-from{start_sampling}.png")
+ax.legend()
+plt.savefig(f"{dat_dir}/objective-emax{emax}-from{start_sampling}-fair_{is_fair_comparison}.png")
 
 
 
